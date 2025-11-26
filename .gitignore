@@ -1,0 +1,5 @@
+/customers-api/node_modules
+/customers-api/.env
+
+/orders-api/node_modules
+/orders-api/.env
