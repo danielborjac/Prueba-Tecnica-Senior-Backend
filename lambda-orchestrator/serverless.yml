@@ -1,0 +1,34 @@
+service: order-orchestrator
+
+frameworkVersion: '3'
+
+# Cargar variables de entorno desde .env
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 30
+  environment:
+    CUSTOMERS_API_URL: ${env:CUSTOMERS_API_URL}
+    ORDERS_API_URL: ${env:ORDERS_API_URL}
+    SERVICE_TOKEN: ${env:SERVICE_TOKEN}
+
+functions:
+  createAndConfirmOrder:
+    handler: src/handlers/orchestrator.createAndConfirmOrder
+    events:
+      - httpApi:
+          path: /orchestrator/create-and-confirm-order
+          method: post
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3003
+    host: 0.0.0.0

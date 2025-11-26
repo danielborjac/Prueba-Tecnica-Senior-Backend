@@ -1,23 +1,24 @@
 const { z } = require('zod');
 
-// Schema para items de una orden
-const orderItemSchema = z.object({
-  product_id: z.number().int().positive('Product ID must be positive'),
-  qty: z.number().int().positive('Quantity must be positive')
+// Schema para crear producto
+const createProductSchema = z.object({
+  sku: z.string().min(1, 'SKU is required').max(100, 'SKU too long').optional(),
+  name: z.string().min(1, 'Name is required').max(255, 'Name too long'),
+  price_cents: z.number().int().min(0, 'Price must be non-negative'),
+  stock: z.number().int().min(0, 'Stock must be non-negative').optional()
 });
 
-// Schema para crear orden
-const createOrderSchema = z.object({
-  customer_id: z.number().int().positive('Customer ID must be positive'),
-  items: z.array(orderItemSchema).min(1, 'At least one item is required'),
-  correlation_id: z.string().optional()
+// Schema para actualizar producto
+const updateProductSchema = z.object({
+  price_cents: z.number().int().min(0, 'Price must be non-negative').optional(),
+  stock: z.number().int().min(0, 'Stock must be non-negative').optional()
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'At least one field must be provided'
 });
 
-// Schema para query params de listado de órdenes
-const listOrdersQuerySchema = z.object({
-  status: z.enum(['CREATED', 'CONFIRMED', 'CANCELED']).optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+// Schema para query params de búsqueda
+const searchQuerySchema = z.object({
+  search: z.string().optional(),
   cursor: z.string().regex(/^\d+$/, 'Cursor must be a number').optional(),
   limit: z.string().regex(/^\d+$/, 'Limit must be a number').optional()
 });
@@ -25,16 +26,6 @@ const listOrdersQuerySchema = z.object({
 // Schema para validar ID en params
 const idParamSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a valid number')
-});
-
-// Schema para confirmar orden
-const confirmOrderSchema = z.object({
-  correlation_id: z.string().optional()
-});
-
-// Schema para cancelar orden
-const cancelOrderSchema = z.object({
-  correlation_id: z.string().optional()
 });
 
 // Middleware genérico de validación
@@ -61,9 +52,8 @@ function validate(schema, property = 'body') {
 }
 
 module.exports = {
-  validateCreateOrder: validate(createOrderSchema, 'body'),
-  validateListOrdersQuery: validate(listOrdersQuerySchema, 'query'),
-  validateIdParam: validate(idParamSchema, 'params'),
-  validateConfirmOrder: validate(confirmOrderSchema, 'body'),
-  validateCancelOrder: validate(cancelOrderSchema, 'body')
+  validateCreateProduct: validate(createProductSchema, 'body'),
+  validateUpdateProduct: validate(updateProductSchema, 'body'),
+  validateSearchQuery: validate(searchQuerySchema, 'query'),
+  validateIdParam: validate(idParamSchema, 'params')
 };

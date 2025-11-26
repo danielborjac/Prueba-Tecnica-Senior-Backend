@@ -15,9 +15,11 @@ const createOrderSchema = z.object({
 
 // Schema para query params de listado de órdenes
 const listOrdersQuerySchema = z.object({
-  status: z.enum(['CREATED', 'CONFIRMED', 'CANCELED']).optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  status: z.enum(['CREATED', 'CONFIRMED', 'CANCELED'], {
+    errorMap: () => ({ message: 'Status must be CREATED, CONFIRMED, or CANCELED' })
+  }).optional(),
+  from: z.string().datetime({ message: 'Invalid datetime format for from' }).optional(),
+  to: z.string().datetime({ message: 'Invalid datetime format for to' }).optional(),
   cursor: z.string().regex(/^\d+$/, 'Cursor must be a number').optional(),
   limit: z.string().regex(/^\d+$/, 'Limit must be a number').optional()
 });

@@ -1,0 +1,19 @@
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Serverless
+.serverless/
+.serverless_plugins/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

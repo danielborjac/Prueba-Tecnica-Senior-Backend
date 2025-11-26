@@ -1,0 +1,28 @@
+{
+  "name": "lambda-orchestrator",
+  "version": "1.0.0",
+  "description": "Lambda orchestrator for creating and confirming orders",
+  "main": "src/handlers/orchestrator.js",
+  "scripts": {
+    "offline": "serverless offline",
+    "deploy": "serverless deploy",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f createAndConfirmOrder -t"
+  },
+  "keywords": [
+    "lambda",
+    "serverless",
+    "orchestrator",
+    "orders"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.3",
+    "serverless": "^3.38.0",
+    "serverless-offline": "^13.3.0"
+  }
+}
