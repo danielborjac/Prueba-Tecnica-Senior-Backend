@@ -1,0 +1,744 @@
+openapi: 3.0.3
+info:
+  title: Orders API
+  version: 1.0.0
+  description: API para gestión de productos y órdenes en sistema B2B
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:3002
+    description: Servidor local de desarrollo
+  - url: https://api.example.com
+    description: Servidor de producción
+
+tags:
+  - name: Products
+    description: Operaciones de productos
+  - name: Orders
+    description: Operaciones de órdenes
+
+paths:
+  /health:
+    get:
+      summary: Health check del servicio
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Servicio funcionando correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  service:
+                    type: string
+                    example: orders-api
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /products:
+    post:
+      summary: Crear un nuevo producto
+      tags:
+        - Products
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Producto creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '409':
+          description: SKU ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Buscar productos con paginación
+      tags:
+        - Products
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /products/{id}:
+    get:
+      summary: Obtener detalles de un producto
+      tags:
+        - Products
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Detalles del producto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Actualizar precio o stock de un producto
+      tags:
+        - Products
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price_cents:
+                  type: integer
+                  minimum: 0
+                  example: 119900
+                stock:
+                  type: integer
+                  minimum: 0
+                  example: 20
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders:
+    post:
+      summary: Crear una nueva orden
+      description: Valida el cliente, verifica stock, calcula totales y crea la orden en estado CREATED
+      tags:
+        - Orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Orden creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          description: Error de validación o stock insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderError'
+        '503':
+          description: Servicio de clientes no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Listar órdenes con filtros
+      tags:
+        - Orders
+      parameters:
+        - name: status
+          in: query
+          description: Filtrar por estado de la orden
+          schema:
+            type: string
+            enum: [CREATED, CONFIRMED, CANCELED]
+            example: CREATED
+        - name: from
+          in: query
+          description: Fecha desde (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-11-01T00:00:00.000Z"
+        - name: to
+          in: query
+          description: Fecha hasta (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-11-30T23:59:59.999Z"
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de órdenes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /orders/{id}:
+    get:
+      summary: Obtener detalles de una orden
+      description: Incluye información completa de la orden con sus items
+      tags:
+        - Orders
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Detalles de la orden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailResponse'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/confirm:
+    post:
+      summary: Confirmar una orden (idempotente)
+      description: Cambia el estado de la orden a CONFIRMED. Idempotente mediante X-Idempotency-Key header.
+      tags:
+        - Orders
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          description: Clave única para garantizar idempotencia
+          schema:
+            type: string
+            example: confirm-order-1-abc123
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                correlation_id:
+                  type: string
+                  example: req-confirm-001
+      responses:
+        '200':
+          description: Orden confirmada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmOrderResponse'
+        '400':
+          description: Orden no puede ser confirmada (ej. ya cancelada)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Operación en progreso con esta idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/cancel:
+    post:
+      summary: Cancelar una orden
+      description: Cancela la orden y restaura el stock. CREATED siempre se puede cancelar, CONFIRMED solo dentro de 10 minutos.
+      tags:
+        - Orders
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                correlation_id:
+                  type: string
+                  example: req-cancel-001
+      responses:
+        '200':
+          description: Orden cancelada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Order canceled successfully
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      status:
+                        type: string
+                        example: CANCELED
+                  correlationId:
+                    type: string
+                    example: req-cancel-001
+        '400':
+          description: No se puede cancelar (ej. fuera del período de 10 minutos)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: ID del recurso
+      schema:
+        type: integer
+        example: 1
+
+    SearchParam:
+      name: search
+      in: query
+      description: Término de búsqueda
+      schema:
+        type: string
+        example: Laptop
+
+    CursorParam:
+      name: cursor
+      in: query
+      description: ID del último registro para paginación
+      schema:
+        type: string
+        pattern: '^\d+$'
+        example: "0"
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Cantidad de registros por página (máximo 100)
+      schema:
+        type: string
+        pattern: '^\d+$'
+        example: "10"
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        sku:
+          type: string
+          example: LAPTOP-001
+        name:
+          type: string
+          example: Laptop Dell XPS 15
+        price_cents:
+          type: integer
+          example: 129900
+        stock:
+          type: integer
+          example: 15
+        created_at:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - price_cents
+      properties:
+        sku:
+          type: string
+          maxLength: 100
+          example: LAPTOP-001
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Laptop Dell XPS 15
+        price_cents:
+          type: integer
+          minimum: 0
+          example: 129900
+        stock:
+          type: integer
+          minimum: 0
+          example: 15
+
+    ProductResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Product'
+
+    OrderItem:
+      type: object
+      required:
+        - product_id
+        - qty
+      properties:
+        product_id:
+          type: integer
+          example: 1
+        qty:
+          type: integer
+          minimum: 1
+          example: 2
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - customer_id
+        - items
+      properties:
+        customer_id:
+          type: integer
+          example: 1
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        correlation_id:
+          type: string
+          example: req-create-order-001
+
+    CreateOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        correlationId:
+          type: string
+          example: req-create-order-001
+        data:
+          type: object
+          properties:
+            customer:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: ACME Corporation
+                email:
+                  type: string
+                  example: ops@acme.com
+                phone:
+                  type: string
+                  example: "+1-555-0100"
+            order:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                status:
+                  type: string
+                  enum: [CREATED, CONFIRMED, CANCELED]
+                  example: CREATED
+                total_cents:
+                  type: integer
+                  example: 259800
+                created_at:
+                  type: string
+                  format: date-time
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: integer
+                        example: 1
+                      qty:
+                        type: integer
+                        example: 2
+                      unit_price_cents:
+                        type: integer
+                        example: 129900
+                      subtotal_cents:
+                        type: integer
+                        example: 259800
+
+    OrderSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        customer_id:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum: [CREATED, CONFIRMED, CANCELED]
+          example: CREATED
+        total_cents:
+          type: integer
+          example: 259800
+        created_at:
+          type: string
+          format: date-time
+
+    OrderDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            customer_id:
+              type: integer
+              example: 1
+            status:
+              type: string
+              enum: [CREATED, CONFIRMED, CANCELED]
+              example: CREATED
+            total_cents:
+              type: integer
+              example: 259800
+            created_at:
+              type: string
+              format: date-time
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  product_id:
+                    type: integer
+                    example: 1
+                  product_name:
+                    type: string
+                    example: Laptop Dell XPS 15
+                  qty:
+                    type: integer
+                    example: 2
+                  unit_price_cents:
+                    type: integer
+                    example: 129900
+                  subtotal_cents:
+                    type: integer
+                    example: 259800
+
+    ConfirmOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Order confirmed successfully
+        correlationId:
+          type: string
+          example: req-confirm-001
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            customer_id:
+              type: integer
+              example: 1
+            status:
+              type: string
+              example: CONFIRMED
+            total_cents:
+              type: integer
+              example: 259800
+            created_at:
+              type: string
+              format: date-time
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  product_id:
+                    type: integer
+                    example: 1
+                  qty:
+                    type: integer
+                    example: 2
+                  unit_price_cents:
+                    type: integer
+                    example: 129900
+                  subtotal_cents:
+                    type: integer
+                    example: 259800
+
+    Pagination:
+      type: object
+      properties:
+        cursor:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 10
+        nextCursor:
+          type: integer
+          nullable: true
+          example: 10
+        hasMore:
+          type: boolean
+          example: true
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Resource not found
+
+    OrderError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Insufficient stock
+        product_id:
+          type: integer
+          example: 1
+        available:
+          type: integer
+          example: 5
+        requested:
+          type: integer
+          example: 10
+        correlationId:
+          type: string
+          example: req-001
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Validation error
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: price_cents
+              message:
+                type: string
+                example: Price must be non-negative

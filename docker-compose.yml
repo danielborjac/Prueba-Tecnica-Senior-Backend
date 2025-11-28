@@ -1,40 +1,124 @@
 version: '3.8'
+
 services:
+  # Base de datos MySQL
   mysql:
     image: mysql:8.0
+    container_name: senior-test-mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: appdb
     volumes:
       - db_data:/var/lib/mysql
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
-      - ./db/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     ports:
-      - "3306:3306"
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend-network
 
+  # API de Clientes
   customers-api:
-    build: ./customers-api
-    env_file:
-      - ./customers-api/.env
+    build:
+      context: ./customers-api
+      dockerfile: Dockerfile
+    container_name: senior-test-customers-api
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=appdb
+      - SERVICE_TOKEN=${SERVICE_TOKEN:-svc_token_very_secret}
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     ports:
       - "3001:3001"
     volumes:
       - ./customers-api:/usr/src/app
-    command: ["npm","run","dev"]
+      - /usr/src/app/node_modules
+    command: ["npm", "run", "dev"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend-network
+    restart: unless-stopped
 
+  # API de Órdenes
   orders-api:
-    build: ./orders-api
-    env_file:
-      - ./orders-api/.env
+    build:
+      context: ./orders-api
+      dockerfile: Dockerfile
+    container_name: senior-test-orders-api
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=appdb
+      - SERVICE_TOKEN=${SERVICE_TOKEN:-svc_token_very_secret}
+      - CUSTOMERS_API_URL=http://customers-api:3001
     depends_on:
-      - mysql
-      - customers-api
+      mysql:
+        condition: service_healthy
+      customers-api:
+        condition: service_healthy
     ports:
       - "3002:3002"
     volumes:
       - ./orders-api:/usr/src/app
-    command: ["npm","run","dev"]
+      - /usr/src/app/node_modules
+    command: ["npm", "run", "dev"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  # Proxy inverso (para ngrok)
+  proxy-api:
+    build:
+      context: ./proxy-api
+      dockerfile: Dockerfile
+    container_name: senior-test-proxy-api
+    environment:
+      - PORT=3000
+      - CUSTOMERS_API_URL=http://customers-api:3001
+      - ORDERS_API_URL=http://orders-api:3002
+    depends_on:
+      customers-api:
+        condition: service_healthy
+      orders-api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./proxy-api:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - backend-network
+    restart: unless-stopped
 
 volumes:
   db_data:
+    driver: local
+
+networks:
+  backend-network:
+    driver: bridge

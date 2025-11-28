@@ -1,0 +1,300 @@
+openapi: 3.0.3
+info:
+  title: Order Orchestrator Lambda
+  version: 1.0.0
+  description: Lambda function para orquestar la creación y confirmación de órdenes en un solo flujo
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:3003
+    description: Servidor local con serverless-offline
+  - url: https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
+    description: Lambda desplegado en AWS
+
+tags:
+  - name: Orchestrator
+    description: Orquestación de operaciones complejas
+
+paths:
+  /orchestrator/create-and-confirm-order:
+    post:
+      summary: Crear y confirmar orden en un solo flujo
+      description: |
+        Orquesta el proceso completo de:
+        1. Validar que el cliente existe (Customers API)
+        2. Crear la orden (Orders API)
+        3. Confirmar la orden de forma idempotente (Orders API)
+        
+        Devuelve un JSON consolidado con información del cliente y la orden confirmada.
+      tags:
+        - Orchestrator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAndConfirmOrderRequest'
+            examples:
+              simple:
+                summary: Orden simple con un producto
+                value:
+                  customer_id: 1
+                  items:
+                    - product_id: 1
+                      qty: 2
+                  idempotency_key: orchestrator-test-001
+                  correlation_id: req-orch-001
+              multiple:
+                summary: Orden con múltiples productos
+                value:
+                  customer_id: 1
+                  items:
+                    - product_id: 1
+                      qty: 2
+                    - product_id: 2
+                      qty: 3
+                  idempotency_key: orchestrator-test-002
+                  correlation_id: req-orch-002
+      responses:
+        '201':
+          description: Orden creada y confirmada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAndConfirmOrderResponse'
+              examples:
+                success:
+                  summary: Respuesta exitosa
+                  value:
+                    success: true
+                    correlationId: req-orch-001
+                    data:
+                      customer:
+                        id: 1
+                        name: ACME Corporation
+                        email: ops@acme.com
+                        phone: "+1-555-0100"
+                      order:
+                        id: 1
+                        status: CONFIRMED
+                        total_cents: 259800
+                        created_at: "2024-11-26T10:30:00.000Z"
+                        items:
+                          - product_id: 1
+                            qty: 2
+                            unit_price_cents: 129900
+                            subtotal_cents: 259800
+        '400':
+          description: Error de validación o datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrchestratorError'
+              examples:
+                validation:
+                  summary: Error de validación
+                  value:
+                    success: false
+                    error: customer_id and items[] are required
+                    correlationId: req-orch-001
+                customerNotFound:
+                  summary: Cliente no encontrado
+                  value:
+                    success: false
+                    error: Customer not found
+                    customerId: 999
+                    correlationId: req-orch-001
+                insufficientStock:
+                  summary: Stock insuficiente
+                  value:
+                    success: false
+                    error: Insufficient stock
+                    details:
+                      product_id: 1
+                      available: 5
+                      requested: 10
+                    correlationId: req-orch-001
+        '500':
+          description: Error interno del orquestador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrchestratorError'
+        '503':
+          description: Servicio externo no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableError'
+              examples:
+                customersDown:
+                  summary: Customers API no disponible
+                  value:
+                    success: false
+                    error: Customers service unavailable
+                    details: connect ECONNREFUSED 127.0.0.1:3001
+                    correlationId: req-orch-001
+                ordersDown:
+                  summary: Orders API no disponible
+                  value:
+                    success: false
+                    error: Orders service unavailable
+                    details: connect ECONNREFUSED 127.0.0.1:3002
+                    correlationId: req-orch-001
+
+components:
+  schemas:
+    OrderItem:
+      type: object
+      required:
+        - product_id
+        - qty
+      properties:
+        product_id:
+          type: integer
+          description: ID del producto
+          minimum: 1
+          example: 1
+        qty:
+          type: integer
+          description: Cantidad a ordenar
+          minimum: 1
+          example: 2
+
+    CreateAndConfirmOrderRequest:
+      type: object
+      required:
+        - customer_id
+        - items
+        - idempotency_key
+      properties:
+        customer_id:
+          type: integer
+          description: ID del cliente
+          minimum: 1
+          example: 1
+        items:
+          type: array
+          description: Lista de productos a ordenar
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        idempotency_key:
+          type: string
+          description: Clave única para garantizar idempotencia en la confirmación
+          minLength: 1
+          example: orchestrator-test-001
+        correlation_id:
+          type: string
+          description: ID de correlación para rastrear la petición (opcional)
+          example: req-orch-001
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: ACME Corporation
+        email:
+          type: string
+          format: email
+          example: ops@acme.com
+        phone:
+          type: string
+          example: "+1-555-0100"
+
+    OrderItemResponse:
+      type: object
+      properties:
+        product_id:
+          type: integer
+          example: 1
+        qty:
+          type: integer
+          example: 2
+        unit_price_cents:
+          type: integer
+          description: Precio unitario en centavos
+          example: 129900
+        subtotal_cents:
+          type: integer
+          description: Subtotal en centavos
+          example: 259800
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        status:
+          type: string
+          enum: [CREATED, CONFIRMED, CANCELED]
+          example: CONFIRMED
+        total_cents:
+          type: integer
+          description: Total de la orden en centavos
+          example: 259800
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-11-26T10:30:00.000Z"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+
+    CreateAndConfirmOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        correlationId:
+          type: string
+          example: req-orch-001
+        data:
+          type: object
+          properties:
+            customer:
+              $ref: '#/components/schemas/Customer'
+            order:
+              $ref: '#/components/schemas/Order'
+
+    OrchestratorError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Customer not found
+        correlationId:
+          type: string
+          example: req-orch-001
+        details:
+          type: object
+          description: Detalles adicionales del error (opcional)
+          additionalProperties: true
+
+    ServiceUnavailableError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Customers service unavailable
+        details:
+          type: string
+          example: connect ECONNREFUSED 127.0.0.1:3001
+        correlationId:
+          type: string
+          example: req-orch-001

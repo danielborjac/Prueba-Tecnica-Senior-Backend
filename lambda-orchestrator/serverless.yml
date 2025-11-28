@@ -11,7 +11,7 @@ provider:
   region: us-east-1
   stage: ${opt:stage, 'dev'}
   memorySize: 256
-  timeout: 30
+  timeout: 60
   environment:
     CUSTOMERS_API_URL: ${env:CUSTOMERS_API_URL}
     ORDERS_API_URL: ${env:ORDERS_API_URL}

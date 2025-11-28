@@ -3,3 +3,6 @@
 
 /orders-api/node_modules
 /orders-api/.env
+
+/proxy-api/node_modules
+/proxy-api/.env

@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: Customers API
+  version: 1.0.0
+  description: API para gestión de clientes en sistema B2B de pedidos
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:3001
+    description: Servidor local de desarrollo
+  - url: https://api.example.com
+    description: Servidor de producción
+
+tags:
+  - name: Customers
+    description: Operaciones relacionadas con clientes
+  - name: Internal
+    description: Endpoints internos para comunicación entre servicios
+
+paths:
+  /health:
+    get:
+      summary: Health check del servicio
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Servicio funcionando correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  service:
+                    type: string
+                    example: customers-api
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /customers:
+    post:
+      summary: Crear un nuevo cliente
+      tags:
+        - Customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  example: ACME Corporation
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                  example: ops@acme.com
+                phone:
+                  type: string
+                  maxLength: 50
+                  example: "+1-555-0100"
+      responses:
+        '201':
+          description: Cliente creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '409':
+          description: Email ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Buscar clientes con paginación
+      tags:
+        - Customers
+      parameters:
+        - name: search
+          in: query
+          description: Término de búsqueda (nombre, email, teléfono)
+          schema:
+            type: string
+            example: ACME
+        - name: cursor
+          in: query
+          description: ID del último registro para paginación
+          schema:
+            type: string
+            pattern: '^\d+$'
+            example: "0"
+        - name: limit
+          in: query
+          description: Cantidad de registros por página (máximo 100)
+          schema:
+            type: string
+            pattern: '^\d+$'
+            example: "10"
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          description: Error de validación en parámetros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /customers/{id}:
+    get:
+      summary: Obtener detalles de un cliente
+      tags:
+        - Customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del cliente
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Detalles del cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Actualizar un cliente
+      tags:
+        - Customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del cliente
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  example: ACME Corporation Updated
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                  example: new-ops@acme.com
+                phone:
+                  type: string
+                  maxLength: 50
+                  example: "+1-555-0200"
+      responses:
+        '200':
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Eliminar un cliente (soft delete)
+      tags:
+        - Customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del cliente
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Cliente eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Customer deleted successfully
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /customers/internal/{id}:
+    get:
+      summary: Obtener cliente (endpoint interno)
+      description: Endpoint usado por otros servicios para validar clientes. Requiere autenticación con SERVICE_TOKEN.
+      tags:
+        - Internal
+      security:
+        - ServiceToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del cliente
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Detalles del cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    ServiceToken:
+      type: http
+      scheme: bearer
+      description: Token de autenticación entre servicios
+
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: ACME Corporation
+        email:
+          type: string
+          format: email
+          example: ops@acme.com
+        phone:
+          type: string
+          example: "+1-555-0100"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-11-26T10:30:00.000Z"
+
+    CustomerResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Customer'
+
+    Pagination:
+      type: object
+      properties:
+        cursor:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 10
+        nextCursor:
+          type: integer
+          nullable: true
+          example: 10
+        hasMore:
+          type: boolean
+          example: true
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Customer not found
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Validation error
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Invalid email format
