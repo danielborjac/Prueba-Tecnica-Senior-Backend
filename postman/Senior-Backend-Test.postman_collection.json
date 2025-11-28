@@ -23,7 +23,7 @@
     },
     {
       "key": "service_token",
-      "value": "your-secret-service-token-here",
+      "value": "svc_token_very_secret",
       "type": "string"
     },
     {

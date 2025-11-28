@@ -577,7 +577,7 @@ La collection usa variables que debes configurar:
 | `customers_base_url` | `http://localhost:3001` | URL pública |
 | `orders_base_url` | `http://localhost:3002` | URL pública |
 | `lambda_base_url` | `http://localhost:3003` | URL de AWS Lambda |
-| `service_token` | `your-secret-service-token-here` | Token real |
+| `service_token` | `svc_token_very_secret` | Token real |
 
 ### Estructura de la Collection
 
@@ -758,6 +758,43 @@ npm run remove
 - Customers API: 12 tests
 - Orders API: 17 tests
 - Coverage: ~75%
+
+#### Configuración correcta:
+
+#### Paso 1: Asegurar que Docker está corriendo
+```bash
+docker-compose up -d
+docker-compose ps
+```
+
+#### Paso 2: Crear .env.test en Customers y Orders
+```bash
+cd customers-api
+cp .env.example .env.test
+
+cd ../orders-api
+cp .env.example .env.test
+```
+recomendado NODE_ENV=test en ambos
+
+#### Paso 3: Ejecutar test (debe realizarse tanto para Customers y Orders)
+```bash
+npm install
+npm test
+```
+
+**Salida esperada:**
+```
+PASS  tests/integration/customers.test.js
+  Customers API - Integration Tests
+    ✓ should create a new customer (234ms)
+    ✓ should return 400 when name is missing (45ms)
+    ...
+
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+Coverage: 75% (ejemplo)
+```
 
 ### Tests Recomendados para Producción
 
