@@ -1,8 +1,15 @@
 /customers-api/node_modules
 /customers-api/.env
+/customers-api/.env.test
+/customers-api/coverage/
 
 /orders-api/node_modules
 /orders-api/.env
+/orders-api/.env.test
+/orders-api/coverage/
 
 /proxy-api/node_modules
 /proxy-api/.env
+
+/db/node_modules
+/db/.env

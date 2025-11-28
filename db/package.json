@@ -1,0 +1,17 @@
+{
+  "name": "database-scripts",
+  "version": "1.0.0",
+  "description": "Database migration and seeding scripts",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "seed": "node seed.js",
+    "reset": "node migrate.js && node seed.js"
+  },
+  "keywords": ["database", "migration", "seed"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.6.5"
+  }
+}

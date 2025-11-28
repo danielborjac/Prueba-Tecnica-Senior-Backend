@@ -78,7 +78,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🔀 Proxy API running on port ${PORT}`);
-  console.log(`📍 Customers API: ${process.env.CUSTOMERS_API_URL || 'http://customers-api:3001'}`);
-  console.log(`📍 Orders API: ${process.env.ORDERS_API_URL || 'http://orders-api:3002'}`);
+  console.log(`Proxy API running on port ${PORT}`);
+  console.log(`Customers API: ${process.env.CUSTOMERS_API_URL || 'http://customers-api:3001'}`);
+  console.log(`Orders API: ${process.env.ORDERS_API_URL || 'http://orders-api:3002'}`);
 });

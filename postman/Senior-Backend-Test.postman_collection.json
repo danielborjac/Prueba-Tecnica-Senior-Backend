@@ -1,0 +1,626 @@
+{
+  "info": {
+    "name": "Senior Backend Test - Order Management",
+    "_postman_id": "senior-backend-test-001",
+    "description": "Collection completa para probar Customers API, Orders API y Lambda Orchestrator",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "customers_base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "orders_base_url",
+      "value": "http://localhost:3002",
+      "type": "string"
+    },
+    {
+      "key": "lambda_base_url",
+      "value": "http://localhost:3003",
+      "type": "string"
+    },
+    {
+      "key": "service_token",
+      "value": "your-secret-service-token-here",
+      "type": "string"
+    },
+    {
+      "key": "customer_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Customers API Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_base_url}}/health",
+              "host": ["{{customers_base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Orders API Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/health",
+              "host": ["{{orders_base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers API",
+      "item": [
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('customer_id', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":\"la favorita\",\n    \"email\":\"la@favorita.com\",\n    \"phone\":\"123456789\"}"
+            },
+            "url": {
+              "raw": "{{customers_base_url}}/customers",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_base_url}}/customers/{{customer_id}}",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Search Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_base_url}}/customers?search=ACME&limit=10",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "ACME"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+1-555-0200\"\n}"
+            },
+            "url": {
+              "raw": "{{customers_base_url}}/customers/{{customer_id}}",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{customers_base_url}}/customers/{{customer_id}}",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer (Internal)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{service_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{customers_base_url}}/customers/internal/1",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers", "internal", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders API - Products",
+      "item": [
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('product_id', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"SSD-001\",\n  \"name\": \"kingston ssd 1TB\",\n  \"price_cents\": 95000,\n  \"stock\": 12\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/products",
+              "host": ["{{orders_base_url}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "Get Product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/products/{{product_id}}",
+              "host": ["{{orders_base_url}}"],
+              "path": ["products", "{{product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/products?search=Laptop&limit=10",
+              "host": ["{{orders_base_url}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Laptop"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price_cents\": 119900,\n  \"stock\": 20\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/products/{{product_id}}",
+              "host": ["{{orders_base_url}}"],
+              "path": ["products", "{{product_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders API - Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('order_id', jsonData.data.order.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"qty\": 2\n    }\n  ],\n  \"correlation_id\": \"req-create-order-001\"\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/orders",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/orders/{{order_id}}",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/orders?limit=10",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Orders by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/orders?status=CREATED&limit=10",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "CREATED"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "confirm-order-{{order_id}}-{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlation_id\": \"req-confirm-001\"\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/orders/{{order_id}}/confirm",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders", "{{order_id}}", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlation_id\": \"req-cancel-001\"\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/orders/{{order_id}}/cancel",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders", "{{order_id}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lambda Orchestrator",
+      "item": [
+        {
+          "name": "Create and Confirm Order (Local)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"qty\": 2\n    }\n  ],\n  \"idempotency_key\": \"orchestrator-test-{{$timestamp}}\",\n  \"correlation_id\": \"req-orchestrator-001\"\n}"
+            },
+            "url": {
+              "raw": "{{lambda_base_url}}/orchestrator/create-and-confirm-order",
+              "host": ["{{lambda_base_url}}"],
+              "path": ["orchestrator", "create-and-confirm-order"]
+            }
+          }
+        },
+        {
+          "name": "Create and Confirm Order (AWS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"qty\": 2\n    }\n  ],\n  \"idempotency_key\": \"orchestrator-aws-{{$timestamp}}\",\n  \"correlation_id\": \"req-orchestrator-aws-001\"\n}"
+            },
+            "url": {
+              "raw": "https://YOUR-LAMBDA-URL.execute-api.us-east-1.amazonaws.com/orchestrator/create-and-confirm-order",
+              "protocol": "https",
+              "host": ["YOUR-LAMBDA-URL", "execute-api", "us-east-1", "amazonaws", "com"],
+              "path": ["orchestrator", "create-and-confirm-order"]
+            },
+            "description": "Reemplazar YOUR-LAMBDA-URL con la URL real de tu Lambda desplegado"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flujo Completo",
+      "item": [
+        {
+          "name": "1. Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('customer_id', jsonData.data.id);",
+                  "    console.log('Customer ID:', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Company\",\n  \"email\": \"test-{{$timestamp}}@example.com\",\n  \"phone\": \"+1-555-9999\"\n}"
+            },
+            "url": {
+              "raw": "{{customers_base_url}}/customers",
+              "host": ["{{customers_base_url}}"],
+              "path": ["customers"]
+            }
+          }
+        },
+        {
+          "name": "2. Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('product_id', jsonData.data.id);",
+                  "    console.log('Product ID:', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"TEST-{{$timestamp}}\",\n  \"name\": \"Test Product\",\n  \"price_cents\": 50000,\n  \"stock\": 100\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/products",
+              "host": ["{{orders_base_url}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "3. Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('order_id', jsonData.data.order.id);",
+                  "    console.log('Order ID:', jsonData.data.order.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"items\": [\n    {\n      \"product_id\": {{product_id}},\n      \"qty\": 3\n    }\n  ],\n  \"correlation_id\": \"flow-test-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/orders",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "4. Confirm Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "flow-confirm-{{$timestamp}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlation_id\": \"flow-confirm-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{orders_base_url}}/orders/{{order_id}}/confirm",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders", "{{order_id}}", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "5. Verify Order Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{orders_base_url}}/orders/{{order_id}}",
+              "host": ["{{orders_base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
